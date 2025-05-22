@@ -61,7 +61,7 @@ class TLSProxy:
         self.running = False
         self.log("[*] Proxy stopped.")
 
-
+#comment for nothing.
 class TLSProxyApp:
     def __init__(self, root):
         self.root = root
