@@ -79,9 +79,9 @@ class TLSProxyApp:
         self.dest_ip = tk.Entry(root)
         self.dest_port = tk.Entry(root)
 
-        self.listen_ip.insert(0, "0.0.0.0")
-        self.listen_port.insert(0, "8443")
-        self.dest_ip.insert(0, "example.com")
+        self.listen_ip.insert(0, "192.168.2.100")
+        self.listen_port.insert(0, "1010")
+        self.dest_ip.insert(0, "192.168.2.200")
         self.dest_port.insert(0, "443")
 
         self.listen_ip.grid(row=0, column=1)
