@@ -1,0 +1,5 @@
+client commands:
+openssl s_server -tls1_2 -accept 443 -cert server-cert.pem -key server-cert.key -CAfile ca-cert.pem
+
+server commands:
+openssl s_client -connect 192.168.1.104:8080 -CAfile ca-cert.pem -cert device-cert.pem -key device-cert.key -tls1_2
