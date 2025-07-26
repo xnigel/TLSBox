@@ -540,4 +540,5 @@ class TLSSnifferApp:
 if __name__ == "__main__":
     root = tk.Tk()
     app = TLSSnifferApp(root)
+    root.iconbitmap('logo.ico')
     root.mainloop()
