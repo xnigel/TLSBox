@@ -512,6 +512,13 @@ class TLSSnifferApp:
             return # User cancelled
 
         try:
+            f.write(f"TLS Sniffer Export - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Exported {len(self.packet_details)} packets:\n\n")
+            f.write(f"Listen IP: {self.listen_ip_entry.get()}\n")
+            f.write(f"Listen Port: {self.listen_port_entry.get()}\n")
+            f.write(f"Target IP/Host: {self.target_ip_host_entry.get()}\n")
+            f.write(f"Target Port: {self.target_port_entry.get()}\n\n")
+            f.write(f"========================================================================\n\n")
             with open(file_path, 'w') as f:
                 for listbox_index in sorted(self.packet_details.keys()):
                     packet_info = self.packet_details[listbox_index]
@@ -520,7 +527,7 @@ class TLSSnifferApp:
                     stream_index = packet_info['stream_index']
                     raw_bytes = packet_info['raw_data']
 
-                    f.write(f"--- Packet [{listbox_index:04d}] ---\n")
+                    f.write(f"--- Packet [{listbox_index:04d}] ---------------------------------------\n")
                     f.write(f"Connection ID: {conn_id}\n")
                     f.write(f"Direction: {direction}\n")
                     f.write(f"Stream Index: {stream_index}\n")
