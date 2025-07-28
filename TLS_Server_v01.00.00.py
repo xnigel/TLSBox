@@ -16,17 +16,30 @@ import socket
 import threading
 import os
 from OpenSSL import SSL, crypto
+import time # Added for time.sleep in receive loop
+import base64
+import tempfile
+
+# === Paste your Base64 encoded PNG string here ===
+# This is a placeholder. You should replace this with the actual Base64 string of your icon.
+# Example (this is a tiny red square for demonstration, your actual string will be much longer):
+ICON_PNG_BASE64 = """
+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
+"""
 
 class TLSServerApp:
     def __init__(self, master):
         self.master = master
-        Server_ver = "00.01.00"
-        Server_yr = "2025.07.28"
+        Server_ver = "01.00.00" # Updated version for robust data handling and shutdown
+        Server_yr = "2025.07.29"
         master.title("TLS Server" + " (v" + Server_ver +")" + " - " + Server_yr + " - nigel.zhai@ul.com")
         master.geometry("500x700") # Increased height for new section
         master.minsize(500, 700) # Set minimum window size
         master.maxsize(500, 700)
         master.resizable(True, True) # Allow resizing
+
+        # Set the window icon
+        self.set_window_icon()
 
         self.server_running = False
         self.server_socket = None
@@ -34,7 +47,7 @@ class TLSServerApp:
         self.connected_clients = [] # List to keep track of active SSL connections and their addresses
 
         # --- Configuration Frame ---
-        config_frame = ttk.LabelFrame(master, text="Server Configuration", padding="10")
+        config_frame = ttk.LabelFrame(master, text="Server Configuration", padding="5")
         config_frame.pack(padx=10, pady=10, fill="x", expand=False)
 
         # File paths
@@ -65,7 +78,7 @@ class TLSServerApp:
         ttk.Entry(config_frame, textvariable=self.port_var, width=10).grid(row=row, column=1, padx=5, pady=2, sticky="w")
 
         row += 1
-        ttk.Label(config_frame, text="Minimum TLS Version:").grid(row=row, column=0, sticky="w", pady=2)
+        ttk.Label(config_frame, text="TLS Version:").grid(row=row, column=0, sticky="w", pady=2)
         tls_versions = ["TLSv1.0", "TLSv1.1", "TLSv1.2", "TLSv1.3"]
         self.tls_version_combobox = ttk.Combobox(config_frame, textvariable=self.tls_version_var, values=tls_versions, state="readonly", width=15)
         self.tls_version_combobox.grid(row=row, column=1, padx=5, pady=2, sticky="w")
@@ -74,18 +87,19 @@ class TLSServerApp:
         config_frame.columnconfigure(1, weight=1) # Make the entry fields expand
 
         # --- Control Buttons ---
-        button_frame = ttk.Frame(master, padding="10")
+        button_frame = ttk.Frame(master, padding="5")
         button_frame.pack(padx=10, pady=5, fill="x", expand=False)
 
         # Adding colours to buttons
-        self.start_button = ttk.Button(button_frame, text="Start Server", command=self.start_server)
-        self.start_button.pack(side="left", padx=5)
 
-        self.stop_button = ttk.Button(button_frame, text="Stop Server", command=self.stop_server, state="disabled")
-        self.stop_button.pack(side="left", padx=5)
+        self.stop_button = ttk.Button(button_frame, text="Stop Server", command=self.stop_server, state="disabled", style="Red.TButton")
+        self.stop_button.pack(side="right", padx=5)
+        
+        self.start_button = ttk.Button(button_frame, text="Start Server", command=self.start_server, style="Green.TButton")
+        self.start_button.pack(side="right", padx=5)
         
         # --- Message Input (New Section) ---
-        message_frame = ttk.LabelFrame(master, text="Send Message to Clients", padding="10")
+        message_frame = ttk.LabelFrame(master, text="Send Message to Clients", padding="5")
         message_frame.pack(padx=10, pady=5, fill="x", expand=False)
 
         self.message_entry = ttk.Entry(message_frame, width=50)
@@ -97,7 +111,7 @@ class TLSServerApp:
 
 
         # --- Log Area ---
-        log_frame = ttk.LabelFrame(master, text="Server Log", padding="10")
+        log_frame = ttk.LabelFrame(master, text="Server Log", padding="5")
         log_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
         self.log_text = scrolledtext.ScrolledText(log_frame, wrap=tk.WORD, state="disabled", width=80, height=20)
@@ -105,11 +119,11 @@ class TLSServerApp:
 
         # Configure styling
         style = ttk.Style()
-        style.configure("TLabel", font=("Inter", 10))
-        style.configure("TButton", font=("Inter", 10, "bold"))
-        style.configure("TEntry", font=("Inter", 10))
-        style.configure("TCombobox", font=("Inter", 10))
-        style.configure("TLabelFrame", font=("Inter", 11, "bold"))
+        style.configure("TLabel", font=("Inter", 9))
+        style.configure("TButton", font=("Inter", 9, "bold"))
+        style.configure("TEntry", font=("Inter", 9))
+        style.configure("TCombobox", font=("Inter", 9))
+        style.configure("TLabelFrame", font=("Inter", 9, "bold"))
         self.log_text.tag_configure("info", foreground="blue")
         self.log_text.tag_configure("success", foreground="green")
         self.log_text.tag_configure("error", foreground="red")
@@ -117,7 +131,42 @@ class TLSServerApp:
         self.log_text.tag_configure("sent", foreground="darkgreen") # New tag for sent messages
         self.log_text.tag_configure("received", foreground="purple") # New tag for received messages
 
+        # Custom button styles
+        style.configure("Green.TButton", background="#D1FFBD", foreground="black")
+        style.map("Green.TButton",
+                  background=[("active", "darkgreen"), ("disabled", "lightgray")],
+                  foreground=[("active", "white"), ("disabled", "darkgray")])
+
+        style.configure("Red.TButton", background="#FF5C5C", foreground="black")
+        style.map("Red.TButton",
+                  background=[("active", "darkred"), ("disabled", "lightgray")],
+                  foreground=[("active", "white"), ("disabled", "darkgray")])
+
         master.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle window close event
+
+    def set_window_icon(self):
+        try:
+            # Decode the Base64 string
+            icon_data = base64.b64decode(ICON_PNG_BASE64)
+
+            # Attempt to use PhotoImage directly
+            try:
+                photo_image = tk.PhotoImage(data=icon_data)
+                self.master.iconphoto(True, photo_image)
+            except tk.TclError:
+                # Fallback to .ico if PhotoImage fails (e.g., if the data isn't a valid PNG or Tkinter version issues)
+                # This requires writing to a temporary .ico file.
+                print("PhotoImage failed, attempting .ico fallback...")
+                temp_ico_path = os.path.join(tempfile.gettempdir(), "temp_icon.ico")
+                with open(temp_ico_path, "wb") as f:
+                    f.write(icon_data) # Assuming the base64 could also be an ICO
+                self.master.iconbitmap(temp_ico_path)
+                os.remove(temp_ico_path) # Clean up the temporary file
+        except Exception as e:
+            print(f"Error setting PNG icon from Base64 or ICO fallback: {e}")
+            print("Ensure the Base64 string is correct and represents a valid PNG or ICO image.")
+            # Fallback to a default Tkinter icon if all else fails
+            self.master.iconbitmap(default="::tk::icons::question")
 
     def browse_file(self, var, file_types):
         """Opens a file dialog and sets the selected file path to the given StringVar."""
@@ -194,19 +243,27 @@ class TLSServerApp:
         for ssl_conn, addr in list(self.connected_clients): # Iterate over a copy
             try:
                 self.log_message(f"Closing connection for client {addr[0]}:{addr[1]}", "info")
+                # Attempt graceful SSL shutdown before closing socket
                 ssl_conn.shutdown()
                 ssl_conn.close()
             except SSL.Error as e:
-                self.log_message(f"Error during SSL connection shutdown for {addr[0]}:{addr[1]}: {e}", "error")
+                # Log SSL shutdown errors
+                error_details = []
+                if e.args and isinstance(e.args[0], (list, tuple)) and all(isinstance(item, tuple) and len(item) == 4 for item in e.args[0]):
+                    for err_code, lib, func, reason in e.args[0]:
+                        error_details.append(f"  - Library: {lib}, Function: {func}, Reason: {reason}")
+                    self.log_message(f"Error during SSL connection shutdown for {addr[0]}:{addr[1]}: {e}\nDetails:\n" + "\n".join(error_details), "error")
+                else:
+                    self.log_message(f"Error during SSL connection shutdown for {addr[0]}:{addr[1]}: {e} (No detailed OpenSSL error stack available)", "error")
             except Exception as e:
                 self.log_message(f"Error closing client socket for {addr[0]}:{addr[1]}: {e}", "error")
         self.connected_clients.clear() # Clear the list after attempting to close all
 
         if self.server_socket:
             try:
-                self.server_socket.shutdown(socket.SHUT_RDWR)
+                # Removed shutdown on listening socket, as it's not typically needed and can cause errors
                 self.server_socket.close()
-                self.server_socket = None
+                self.server_socket = None # Set to None immediately after closing
             except OSError as e:
                 self.log_message(f"Error closing server socket: {e}", "error")
         
@@ -281,7 +338,30 @@ class TLSServerApp:
 
                     try:
                         # Perform the SSL handshake
-                        ssl_conn.do_handshake()
+                        # Loop until handshake is successful or a fatal error occurs
+                        while True:
+                            try:
+                                ssl_conn.do_handshake()
+                                break # Handshake successful, exit loop
+                            except SSL.WantReadError:
+                                self.log_message(f"Handshake with {addr[0]}:{addr[1]}: Waiting for more data...", "info")
+                                time.sleep(0.1) # Small delay to prevent busy-waiting
+                                continue
+                            except SSL.Error as e:
+                                error_details = []
+                                if e.args and isinstance(e.args[0], (list, tuple)) and all(isinstance(item, tuple) and len(item) == 4 for item in e.args[0]):
+                                    for err_code, lib, func, reason in e.args[0]:
+                                        error_details.append(f"  - Library: {lib}, Function: {func}, Reason: {reason}")
+                                    self.log_message(f"SSL Handshake failed with {addr[0]}:{addr[1]}: {e}\nDetails:\n" + "\n".join(error_details), "error")
+                                else:
+                                    self.log_message(f"SSL Handshake failed with {addr[0]}:{addr[1]}: {e} (No detailed OpenSSL error stack available)", "error")
+                                sock.close() # Close raw socket if handshake fails
+                                raise # Re-raise to be caught by outer try-except
+                            except Exception as e:
+                                self.log_message(f"Error during handshake with {addr[0]}:{addr[1]}: {e}", "error")
+                                sock.close() # Close raw socket on error
+                                raise # Re-raise
+
                         self.log_message(f"SSL Handshake successful with {addr[0]}:{addr[1]}", "success")
                         
                         # Get negotiated protocol version
@@ -307,12 +387,12 @@ class TLSServerApp:
                         client_handler_thread.daemon = True
                         client_handler_thread.start()
 
-                    except SSL.Error as e:
+                    except SSL.Error as e: # Catch fatal SSL errors from handshake loop
                         self.log_message(f"SSL Handshake failed with {addr[0]}:{addr[1]}: {e}", "error")
-                        sock.close() # Close raw socket if handshake fails
-                    except Exception as e:
+                        sock.close() # Ensure raw socket is closed
+                    except Exception as e: # Catch other errors from handshake loop
                         self.log_message(f"Error during connection handling with {addr[0]}:{addr[1]}: {e}", "error")
-                        sock.close() # Close raw socket on error
+                        sock.close() # Ensure raw socket is closed
 
                 except socket.timeout:
                     # This is expected when no connections are incoming, allows checking self.server_running
@@ -336,6 +416,8 @@ class TLSServerApp:
             self.log_message(f"Unhandled Server Thread Error: {e}", "error")
             self.stop_server()
         finally:
+            # The server_socket is handled in stop_server, or if an error occurs before stop_server is called.
+            # This finally block ensures it's closed if not already.
             if self.server_socket:
                 try:
                     self.server_socket.close()
@@ -350,25 +432,57 @@ class TLSServerApp:
 
     def _handle_client(self, ssl_conn, addr):
         """Handles data reception for a single connected client."""
-        while self.server_running:
+        while self.server_running: # Continue as long as server is running
             try:
+                # Use a smaller buffer for recv in a polling loop to be more responsive
                 data = ssl_conn.recv(4096)
                 if not data:
-                    self.log_message(f"Client {addr[0]}:{addr[1]} disconnected.", "info")
+                    # A clean SSL shutdown by the peer results in recv returning 0 bytes
+                    self.log_message(f"Client {addr[0]}:{addr[1]} initiated clean SSL shutdown or closed the connection.", "info")
                     break # Exit loop if client disconnected
                 self.log_message(f"Received from {addr[0]}:{addr[1]}: {data.decode('utf-8', errors='ignore')}", "received")
                 # Echo back the data (original functionality)
                 response = f"Echo from server: {data.decode('utf-8', errors='ignore')}"
-                ssl_conn.sendall(response.encode('utf-8'))
+                
+                # Loop send to handle SSL.WantWriteError
+                response_bytes = response.encode('utf-8')
+                while True:
+                    try:
+                        ssl_conn.sendall(response_bytes)
+                        break # Send successful, exit loop
+                    except SSL.WantWriteError:
+                        self.log_message(f"Send to {addr[0]}:{addr[1]}: Waiting for write buffer to clear...", "info")
+                        time.sleep(0.05) # Small delay to prevent busy-waiting
+                        continue
+
                 self.log_message(f"Sent echo to {addr[0]}:{addr[1]}: {response}", "sent")
             except SSL.WantReadError:
-                # No data available, continue loop
+                # No data available, continue loop. This is expected in a non-blocking loop.
+                time.sleep(0.05) # Small delay to prevent busy-waiting
                 continue
+            except SSL.ZeroReturnError:
+                # This explicitly handles a clean SSL shutdown from the peer
+                self.log_message(f"Client {addr[0]}:{addr[1]} initiated clean SSL shutdown (ZeroReturnError).", "info")
+                break
             except SSL.Error as e:
-                self.log_message(f"SSL data error with {addr[0]}:{addr[1]}: {e}", "error")
+                # Log SSL errors during receive or send
+                error_details = []
+                if e.args and isinstance(e.args[0], (list, tuple)) and all(isinstance(item, tuple) and len(item) == 4 for item in e.args[0]):
+                    for err_code, lib, func, reason in e.args[0]:
+                        error_details.append(f"  - Library: {lib}, Function: {func}, Reason: {reason}")
+                    self.log_message(f"SSL data error with {addr[0]}:{addr[1]}: {e}\nDetails:\n" + "\n".join(error_details), "error")
+                else:
+                    self.log_message(f"SSL data error with {addr[0]}:{addr[1]}: {e} (No detailed OpenSSL error stack available)", "error")
                 break
             except socket.error as e:
-                self.log_message(f"Socket error with {addr[0]}:{addr[1]}: {e}", "error")
+                # Log socket errors during receive or send
+                if e.errno == 10035: # WSAEWOULDBLOCK
+                    time.sleep(0.05) # Small delay to prevent busy-waiting
+                    continue
+                elif e.errno == 10054: # WSAECONNRESET
+                    self.log_message(f"Socket error with {addr[0]}:{addr[1]} (Connection Reset by Peer): {e}", "error")
+                else:
+                    self.log_message(f"Socket error with {addr[0]}:{addr[1]}: {e}", "error")
                 break
             except Exception as e:
                 self.log_message(f"Unexpected error during data exchange with {addr[0]}:{addr[1]}: {e}", "error")
@@ -379,11 +493,21 @@ class TLSServerApp:
             self.connected_clients.remove((ssl_conn, addr))
             self.log_message(f"Client {addr[0]}:{addr[1]} removed from active connections. Total: {len(self.connected_clients)}", "info")
         try:
+            # Attempt graceful SSL shutdown before closing socket
             ssl_conn.shutdown()
             ssl_conn.close()
             self.log_message(f"Connection with {addr[0]}:{addr[1]} closed.", "info")
+        except SSL.Error as e:
+            error_details = []
+            if e.args and isinstance(e.args[0], (list, tuple)) and all(isinstance(item, tuple) and len(item) == 4 for item in e.args[0]):
+                for err_code, lib, func, reason in e.args[0]:
+                    error_details.append(f"  - Library: {lib}, Function: {func}, Reason: {reason}")
+                self.log_message(f"Error closing SSL connection for {addr[0]}:{addr[1]}: {e}\nDetails:\n" + "\n".join(error_details), "error")
+            else:
+                self.log_message(f"Error closing SSL connection for {addr[0]}:{addr[1]}: {e} (No detailed OpenSSL error stack available)", "error")
         except Exception as e:
-            self.log_message(f"Error closing SSL connection for {addr[0]}:{addr[1]}: {e}", "error")
+            self.log_message(f"Error closing socket for {addr[0]}:{addr[1]}: {e}", "error")
+
 
     def send_message_event(self, event=None):
         """Handler for sending message when Enter key is pressed."""
@@ -409,12 +533,25 @@ class TLSServerApp:
         clients_to_remove = []
 
         self.log_message(f"Attempting to send message to {len(self.connected_clients)} client(s): '{message}'", "info")
-        for ssl_conn, addr in self.connected_clients:
+        for ssl_conn, addr in list(self.connected_clients): # Iterate over a copy to allow modification
             try:
-                ssl_conn.sendall(message_bytes)
-                self.log_message(f"Sent to {addr[0]}:{addr[1]}: {message}", "sent")
+                # Loop send to handle SSL.WantWriteError
+                while True:
+                    try:
+                        ssl_conn.sendall(message_bytes)
+                        break # Send successful, exit loop
+                    except SSL.WantWriteError:
+                        self.log_message(f"Send to {addr[0]}:{addr[1]}: Waiting for write buffer to clear...", "info")
+                        time.sleep(0.05) # Small delay to prevent busy-waiting
+                        continue
             except SSL.Error as e:
-                self.log_message(f"SSL send error to {addr[0]}:{addr[1]}: {e}. Client will be disconnected.", "error")
+                error_details = []
+                if e.args and isinstance(e.args[0], (list, tuple)) and all(isinstance(item, tuple) and len(item) == 4 for item in e.args[0]):
+                    for err_code, lib, func, reason in e.args[0]:
+                        error_details.append(f"  - Library: {lib}, Function: {func}, Reason: {reason}")
+                    self.log_message(f"SSL send error to {addr[0]}:{addr[1]}: {e}\nDetails:\n" + "\n".join(error_details), "error")
+                else:
+                    self.log_message(f"SSL send error to {addr[0]}:{addr[1]}: {e} (No detailed OpenSSL error stack available)", "error")
                 clients_to_remove.append((ssl_conn, addr))
             except socket.error as e:
                 self.log_message(f"Socket send error to {addr[0]}:{addr[1]}: {e}. Client will be disconnected.", "error")
@@ -422,15 +559,26 @@ class TLSServerApp:
             except Exception as e:
                 self.log_message(f"Unexpected error sending to {addr[0]}:{addr[1]}: {e}. Client will be disconnected.", "error")
                 clients_to_remove.append((ssl_conn, addr))
+            else: # This block executes if no exceptions occurred in the try block
+                self.log_message(f"Sent to {addr[0]}:{addr[1]}: {message}", "sent")
         
         # Remove clients that had errors during send
         for client_info in clients_to_remove:
-            if client_info in self.connected_clients:
+            if client_info in self.connected_clients: # Check if still in list (might have been removed by _handle_client)
                 self.connected_clients.remove(client_info)
                 self.log_message(f"Client {client_info[1][0]}:{client_info[1][1]} removed due to send error.", "info")
                 try:
+                    # Attempt graceful SSL shutdown before closing socket
                     client_info[0].shutdown()
                     client_info[0].close()
+                except SSL.Error as e:
+                    error_details = []
+                    if e.args and isinstance(e.args[0], (list, tuple)) and all(isinstance(item, tuple) and len(item) == 4 for item in e.args[0]):
+                        for err_code, lib, func, reason in e.args[0]:
+                            error_details.append(f"  - Library: {lib}, Function: {func}, Reason: {reason}")
+                        self.log_message(f"Error closing SSL connection for removed client {client_info[1][0]}:{client_info[1][1]}: {e}\nDetails:\n" + "\n".join(error_details), "error")
+                    else:
+                        self.log_message(f"Error closing SSL connection for removed client {client_info[1][0]}:{client_info[1][1]}: {e} (No detailed OpenSSL error stack available)", "error")
                 except Exception as e:
                     self.log_message(f"Error closing socket for removed client {client_info[1][0]}:{client_info[1][1]}: {e}", "error")
 

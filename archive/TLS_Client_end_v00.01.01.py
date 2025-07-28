@@ -38,8 +38,8 @@ class TLSClientApp:
         config_frame.pack(padx=5, pady=10, fill="x", expand=False)
 
         # Connection details
-        self.ip_var = tk.StringVar(value="10.219.0.90")
-        self.port_var = tk.StringVar(value="8080")
+        self.ip_var = tk.StringVar(value="192.168.1.104")
+        self.port_var = tk.StringVar(value="443")
 
         # File paths for client certificates
         self.cert_file_var = tk.StringVar()
@@ -85,10 +85,10 @@ class TLSClientApp:
         button_frame = ttk.Frame(master, padding="5")
         button_frame.pack(padx=5, pady=5, fill="x", expand=False)
 
-        self.connect_button = ttk.Button(button_frame, text="Connect", command=self.connect_client)
+        self.connect_button = ttk.Button(button_frame, text="Connect", command=self.connect_client, style="Green.TButton")
         self.connect_button.pack(side="left", padx=5)
 
-        self.disconnect_button = ttk.Button(button_frame, text="Disconnect", command=self.disconnect_client, state="disabled")
+        self.disconnect_button = ttk.Button(button_frame, text="Disconnect", command=self.disconnect_client, state="disabled", style="Red.TButton")
         self.disconnect_button.pack(side="left", padx=5)
 
         # --- Message Input ---
@@ -123,6 +123,16 @@ class TLSClientApp:
         self.log_text.tag_configure("sent", foreground="darkgreen")
         self.log_text.tag_configure("received", foreground="purple")
 
+        # Custom button styles
+        style.configure("Green.TButton", background="#D1FFBD", foreground="black")
+        style.map("Green.TButton",
+                  background=[("active", "darkgreen"), ("disabled", "lightgray")],
+                  foreground=[("active", "white"), ("disabled", "darkgray")])
+
+        style.configure("Red.TButton", background="#FF5C5C", foreground="black")
+        style.map("Red.TButton",
+                  background=[("active", "darkred"), ("disabled", "lightgray")],
+                  foreground=[("active", "white"), ("disabled", "darkgray")])
         master.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle window close event
 
     def browse_file(self, var, file_types):
@@ -242,7 +252,7 @@ class TLSClientApp:
             elif tls_version == "TLSv1.1":
                 options |= SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 | SSL.OP_NO_TLSv1
             elif tls_version == "TLSv1.2":
-                options |= SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 | SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1
+                options |= SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 | SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_3
             elif tls_version == "TLSv1.3":
                 options |= SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 | SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 | SSL.OP_NO_TLSv1_2
             context.set_options(options)
@@ -272,10 +282,12 @@ class TLSClientApp:
             # Connect to the server
             self.client_socket.connect((ip_address, port))
             self.log_message(f"Connected to {ip_address}:{port}", "success")
+            self.log_message(f"Nigel: good_1?")
 
             # Wrap the socket with SSL
             self.ssl_conn = SSL.Connection(context, self.client_socket)
             self.ssl_conn.set_connect_state()
+            self.log_message(f"Nigel: good_2?")
 
             # Perform the SSL handshake
             self.ssl_conn.do_handshake()
