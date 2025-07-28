@@ -111,11 +111,11 @@ class TLSClientApp:
 
         # Configure styling
         style = ttk.Style()
-        style.configure("TLabel", font=("Inter", 10))
-        style.configure("TButton", font=("Inter", 10, "bold"))
-        style.configure("TEntry", font=("Inter", 10))
-        style.configure("TCombobox", font=("Inter", 10))
-        style.configure("TLabelFrame", font=("Inter", 11, "bold"))
+        style.configure("TLabel", font=("Inter", 9))
+        style.configure("TButton", font=("Inter", 9, "bold"))
+        style.configure("TEntry", font=("Inter", 9))
+        style.configure("TCombobox", font=("Inter", 9))
+        style.configure("TLabelFrame", font=("Inter", 9, "bold"))
         self.log_text.tag_configure("info", foreground="blue")
         self.log_text.tag_configure("success", foreground="green")
         self.log_text.tag_configure("error", foreground="red")
@@ -301,15 +301,19 @@ class TLSClientApp:
             self.receive_thread.start()
 
         except socket.timeout:
+            print(f"Connection timed out to {ip_address}:{port}")
             self.log_message(f"Connection timed out to {ip_address}:{port}", "error")
             self.disconnect_client()
         except socket.error as e:
+            print(f"Socket Error: {e}")
             self.log_message(f"Socket Error: {e}", "error")
             self.disconnect_client()
         except SSL.Error as e:
+            print(f"SSL Handshake Error: {e}")
             self.log_message(f"SSL Handshake Error: {e}", "error")
             self.disconnect_client()
         except Exception as e:
+            print(f"Unhandled Client Thread Error: {e}")
             self.log_message(f"Unhandled Client Thread Error: {e}", "error")
             self.disconnect_client()
         finally:

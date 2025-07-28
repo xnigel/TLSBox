@@ -71,7 +71,7 @@ class TLSSnifferApp:
         # Listen IP and Port
         tk.Label(config_frame, text="Listen IP:").grid(row=0, column=0, padx=2, pady=5, sticky="w")
         self.listen_ip_entry = tk.Entry(config_frame, width=14)
-        self.listen_ip_entry.insert(0, "0.0.0.0") # Default to listen on all interfaces
+        self.listen_ip_entry.insert(0, "192.168.1.123") # Default to listen on all interfaces
         self.listen_ip_entry.grid(row=0, column=1, padx=2, pady=5, sticky="w")
 
         tk.Label(config_frame, text="Listen Port:").grid(row=1, column=0, padx=2, pady=5, sticky="w")
@@ -82,7 +82,7 @@ class TLSSnifferApp:
         # Target IP/Host and Port
         tk.Label(config_frame, text="Target IP/Host:").grid(row=0, column=2, padx=2, pady=5, sticky="w")
         self.target_ip_host_entry = tk.Entry(config_frame, width=14)
-        self.target_ip_host_entry.insert(0, "192.168.1.104") # Default target
+        self.target_ip_host_entry.insert(0, "192.168.1.100") # Default target
         self.target_ip_host_entry.grid(row=0, column=3, padx=2, pady=5, sticky="w")
 
         tk.Label(config_frame, text="Target Port:").grid(row=1, column=2, padx=2, pady=5, sticky="w")
@@ -129,7 +129,7 @@ class TLSSnifferApp:
         # "Hold Packets" toggle switch
         self.hold_packets_toggle = tk.Checkbutton(
             control_frame,
-            text="Hold Packets\n(Manual Forwarding)",
+            text="Hold Packets\n(Forward Manually)",
             variable=self.hold_packets_var,
             command=self.toggle_hold_packets,
             anchor="w",  # Align text to the left
@@ -151,7 +151,7 @@ class TLSSnifferApp:
         self.clear_button = tk.Button(control_frame, text="Clear Packets", command=self.clear_packets, width=button_width, height=button_height)
         self.clear_button.pack(side="right", padx=5)
 
-        self.export_button = tk.Button(control_frame, text="Export Packets", command=self.export_packets, width=button_width, height=button_height)
+        self.export_button = tk.Button(control_frame, text="Export\nSelected Packets", command=self.export_packets, width=button_width, height=button_height, bg='#FFEFB3', fg="black")
         self.export_button.pack(side="right", padx=5)
 
 
@@ -353,7 +353,7 @@ class TLSSnifferApp:
                 stream_index = packet_info['stream_index']
 
                 display_text = (
-                    f"[{self.current_packet_index:04d}] "
+                    f"[{self.current_packet_index:06d}] "
                     # f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{timestamp:.2f}"
                     f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{time.strftime('%Y.%m.%d-%H:%M:%S')}"
                 )
