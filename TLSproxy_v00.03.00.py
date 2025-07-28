@@ -1,3 +1,14 @@
+#   Initial version was built in May 2025                                        #
+#                                                                                #
+#   Version Number Defination:                                                   #
+#   v00.01.01 20250501                                                           #
+#    -- -- --                                                                    #
+#     |  |  |                                                                    #
+#     |  |  +------     GUI Updates                                              #
+#     |  +---------     Crypto Function Updates                                  #
+#     +------------     Published Version (Major Change)                         #
+#                                                                                #
+# _______________________________________________________________________________#
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog, filedialog
 import socket
@@ -26,6 +37,9 @@ SERVER_TO_CLIENT = "Server -> Client"
 class TLSSnifferApp:
     def __init__(self, master):
         self.master = master
+        TLSproxy_ver = "00.03.00"
+        TLSproxy_yr = "2025.07.28"
+        master.title("TLSproxy" + " (v" + TLSproxy_ver +")" + " - " + TLSproxy_yr + " - nigel.zhai@ul.com")
         master.title("TLS Sniffer (TCP Proxy)")
         master.geometry("580x700") # Set initial window size
         master.minsize(580, 660) # Set minimum window size
