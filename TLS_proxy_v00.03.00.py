@@ -15,6 +15,7 @@ import socket
 import threading
 import queue
 import binascii
+import datetime
 import time
 import sys
 
@@ -195,7 +196,7 @@ class TLSSnifferApp:
 
     def stop_proxy(self):
         if not self.running:
-            messagebox.showinfo("Info", "Proxy is not running.")
+            # messagebox.showinfo("Info", "Proxy is not running.")
             return
 
         self.running = False
@@ -208,7 +209,7 @@ class TLSSnifferApp:
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         self.status_label.config(text="Status: Stopped", fg="blue")
-        #messagebox.showinfo("Info", "Proxy stopped.")
+        # messagebox.showinfo("Info", "Proxy stopped.")
 
     def _run_proxy_server(self, listen_ip, listen_port, target_ip_host, target_port):
         global connection_id_counter # Ensure we can modify the global counter
@@ -353,7 +354,8 @@ class TLSSnifferApp:
 
                 display_text = (
                     f"[{self.current_packet_index:04d}] "
-                    f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{timestamp:.2f}"
+                    # f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{timestamp:.2f}"
+                    f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{time.strftime('%Y.%m.%d-%H:%M:%S')}"
                 )
                 self.packet_listbox.insert(tk.END, display_text)
                 self.packet_listbox.see(tk.END) # Scroll to the end
@@ -497,29 +499,33 @@ class TLSSnifferApp:
             for key in list(held_packets.keys()):
                 held_packets[key]['event'].set() # Release any held packets
             held_packets.clear()
-        messagebox.showinfo("Cleared", "All displayed and held packets cleared.")
+        # messagebox.showinfo("Cleared", "All displayed and held packets cleared.")
 
     def export_packets(self):
         if not self.packet_details:
             messagebox.showinfo("Info", "No packets to export.")
             return
 
+        now = datetime.datetime.now()
+        current_datetime_str = now.strftime("%Y%m%d_%H%M%S") # Format: YYYYMMDD_HHMMSS
+
         file_path = filedialog.asksaveasfilename(
-            defaultextension=".log",
-            filetypes=[("Log files", "*.log"), ("Text files", "*.txt"), ("All files", "*.*")]
+            defaultextension=".log", # Corrected: only the extension here
+            initialfile=f"TLS_log_{current_datetime_str}.log", # Added initialfile
+            filetypes=[("Log Files", "*.log"), ("Text files", "*.txt"), ("All files", "*.*")]
         )
         if not file_path:
             return # User cancelled
 
         try:
-            f.write(f"TLS Sniffer Export - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Exported {len(self.packet_details)} packets:\n\n")
-            f.write(f"Listen IP: {self.listen_ip_entry.get()}\n")
-            f.write(f"Listen Port: {self.listen_port_entry.get()}\n")
-            f.write(f"Target IP/Host: {self.target_ip_host_entry.get()}\n")
-            f.write(f"Target Port: {self.target_port_entry.get()}\n\n")
-            f.write(f"========================================================================\n\n")
-            with open(file_path, 'w') as f:
+            with open(file_path, 'w') as f: # Open the file here
+                f.write(f"===========================================================\n")
+                f.write(f"TLS Sniffer Export - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Exported {len(self.packet_details)} packets:\n")
+                f.write(f"Listen IP/Port: [{self.listen_ip_entry.get()} : {self.listen_port_entry.get()}]\n")
+                f.write(f"Target IP/Port: [{self.target_ip_host_entry.get()} : {self.target_port_entry.get()}]\n")
+                f.write(f"===========================================================\n\n\n")
+
                 for listbox_index in sorted(self.packet_details.keys()):
                     packet_info = self.packet_details[listbox_index]
                     conn_id = packet_info['conn_id']
@@ -527,7 +533,7 @@ class TLSSnifferApp:
                     stream_index = packet_info['stream_index']
                     raw_bytes = packet_info['raw_data']
 
-                    f.write(f"--- Packet [{listbox_index:04d}] ---------------------------------------\n")
+                    f.write(f"--- Packet [{listbox_index:06d}] ---------------------------------------\n")
                     f.write(f"Connection ID: {conn_id}\n")
                     f.write(f"Direction: {direction}\n")
                     f.write(f"Stream Index: {stream_index}\n")
@@ -548,7 +554,7 @@ class TLSSnifferApp:
                         ascii_part = ascii_dump[i:i+16]
                         f.write(f"{ascii_part}\n")
                     f.write("\n")
-                messagebox.showinfo("Success", f"Packets exported successfully to {file_path}")
+            messagebox.showinfo("Success", f"Packets exported successfully to {file_path}") # This line should be outside the `with` block to ensure `f` is closed before showing info.
         except Exception as e:
             messagebox.showerror("Error", f"Failed to export packets: {e}")
 
