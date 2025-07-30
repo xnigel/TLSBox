@@ -16,9 +16,8 @@
 #   03. v00.03.01 Fixed the ico issue.
 #   04. v01.00.00 Final release version.
 #   05. v01.00.01 Fixed the Hold/modify/forward packets issue. 2025.07.30
-#
+#   06. v01.00.02 Click Modify button to display both original and modified packets. 2025.07.31
 # _______________________________________________________________________________
-import tkinter as tk
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog, filedialog
 import socket
@@ -43,8 +42,8 @@ iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1I
 # Define a thread-safe queue for packets to be displayed in the GUI
 packet_display_queue = queue.Queue()
 # Define a dictionary to hold packets that are paused for modification
-# Key: (connection_id, packet_direction, packet_index_in_stream)
-# Value: {'data': bytes, 'event': threading.Event}
+# Key: (connection_id, packet_direction, stream_index)
+# Value: {'original_data': bytes, 'modified_data': bytes, 'event': threading.Event}
 held_packets = {}
 held_packets_lock = threading.Lock() # Lock for accessing held_packets dictionary
 
@@ -59,8 +58,8 @@ SERVER_TO_CLIENT = "Server -> Client"
 class TLSSnifferApp:
     def __init__(self, master):
         self.master = master
-        TLSproxy_ver = "01.00.00"
-        TLSproxy_yr = "2025.07.29"
+        TLSproxy_ver = "01.00.02" # Updated version number
+        TLSproxy_yr = "2025.07.31" # Updated date
         master.title("TLSBox" + " (v" + TLSproxy_ver +")" + " - " + TLSproxy_yr + " - nigel.zhai@ul.com")
         master.geometry("580x700") # Set initial window size
         master.minsize(580, 660) # Set minimum window size
@@ -74,7 +73,7 @@ class TLSSnifferApp:
         self.proxy_thread = None
         self.listen_socket = None
 
-        # Variable for the "Hold Packets" toggle switch - MOVED HERE
+        # Variable for the "Hold Packets" toggle switch
         self.hold_packets_var = tk.BooleanVar(value=False) # Default to automatic forwarding
 
         self.create_widgets()
@@ -82,7 +81,7 @@ class TLSSnifferApp:
         self.update_gui_thread.start()
 
         # Dictionary to store packet details for the listbox
-        # Key: Listbox index, Value: {'conn_id': int, 'direction': str, 'stream_index': int, 'raw_data': bytes}
+        # Key: Listbox index, Value: {'conn_id': int, 'direction': str, 'stream_index': int, 'raw_data': bytes, 'type': 'original' or 'modified'}
         self.packet_details = {}
         self.current_packet_index = 0 # Unique index for packets in the listbox
 
@@ -339,44 +338,46 @@ class TLSSnifferApp:
                 if not data:
                     break # Connection closed by source
 
-                # Add packet to display queue
-                packet_display_queue.put({
-                    'conn_id': conn_id,
-                    'direction': direction,
-                    'size': len(data),
-                    'timestamp': time.time(),
-                    'raw_data': data,
-                    'stream_index': stream_index # Unique index within this stream direction
-                })
+                # Always add the original packet to the display queue and packet_details
+                # This ensures all captured packets are logged, even if not held/modified
+                self.master.after(0, lambda d=data, di=direction, ci=conn_id, si=stream_index:
+                                  self._add_packet_to_display(d, di, ci, si, 'original'))
 
                 data_to_send = data # Default to original data
 
                 if self.hold_packets_var.get(): # Check the state of the toggle switch
                     # Prepare for holding if manual forwarding is enabled
                     packet_key = (conn_id, direction, stream_index)
-                    stream_index += 1 # Increment for next packet in this stream
-
+                    
                     # Create an event for this packet, initially not set (meaning it's held)
                     packet_event = threading.Event()
                     with held_packets_lock:
-                        held_packets[packet_key] = {'data': data, 'event': packet_event}
+                        held_packets[packet_key] = {
+                            'original_data': data,
+                            'modified_data': data, # Initially, modified data is the same as original
+                            'event': packet_event
+                        }
                     # Wait for the event to be set (i.e., packet is forwarded)
                     packet_event.wait() # This will block until forward_packet is called for this key
 
                     with held_packets_lock:
                         # Ensure the packet is still in held_packets before trying to pop
                         if packet_key in held_packets:
-                            data_to_send = held_packets.pop(packet_key)['data'] # Get data and remove from held_packets
+                            data_to_send = held_packets[packet_key]['modified_data'] # Get the (potentially modified) data
+                            
+                            # If modified_data is different from original_data, add the modified packet to display
+                            if held_packets[packet_key]['original_data'] != data_to_send:
+                                self.master.after(0, lambda d=data_to_send, di=direction, ci=conn_id, si=stream_index:
+                                                  self._add_packet_to_display(d, di, ci, si, 'modified'))
+                            
+                            held_packets.pop(packet_key) # Remove from held_packets after forwarding
                         else:
                             # This case should ideally not happen if packet_event.wait() unblocked,
                             # but as a safeguard, if somehow it's missing, send the original data.
                             print(f"Warning: Packet {packet_key} unexpectedly not in held_packets after wait.")
-                else:
-                    # If not holding, increment stream_index here too, as packets are still part of a stream
-                    stream_index += 1
-                    # No holding, send immediately. data_to_send is already `data`.
-
+                
                 destination_socket.sendall(data_to_send)
+                stream_index += 1 # Increment for next packet in this stream, regardless of holding
 
             except socket.timeout:
                 continue # No data, try again
@@ -388,6 +389,32 @@ class TLSSnifferApp:
                 print(f"Connection {conn_id} ({direction}): Unexpected error during forwarding: {e}")
                 break
 
+    def _add_packet_to_display(self, raw_data, direction, conn_id, stream_index, packet_type):
+        """Helper function to add packet details to the GUI and internal storage."""
+        display_text_prefix = ""
+        if packet_type == 'original':
+            display_text_prefix = "[ORIGINAL] "
+        elif packet_type == 'modified':
+            display_text_prefix = "[MODIFIED] "
+
+        display_text = (
+            f"[{self.current_packet_index:06d}] {display_text_prefix}"
+            f"ConnID:{conn_id} | {direction} | Size:{len(raw_data)} bytes | Time:{time.strftime('%Y.%m.%d-%H:%M:%S')}"
+        )
+        self.packet_listbox.insert(tk.END, display_text)
+        self.packet_listbox.see(tk.END) # Scroll to the end
+
+        # Store full packet details for later retrieval
+        self.packet_details[self.current_packet_index] = {
+            'conn_id': conn_id,
+            'direction': direction,
+            'stream_index': stream_index,
+            'raw_data': raw_data,
+            'type': packet_type # Store the type of packet (original/modified)
+        }
+        self.current_packet_index += 1
+
+
     def update_gui(self):
         while True:
             try:
@@ -398,23 +425,10 @@ class TLSSnifferApp:
                 timestamp = packet_info['timestamp']
                 raw_data = packet_info['raw_data']
                 stream_index = packet_info['stream_index']
+                packet_type = packet_info.get('type', 'original') # Default to 'original' if not specified
 
-                display_text = (
-                    f"[{self.current_packet_index:06d}] "
-                    # f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{timestamp:.2f}"
-                    f"ConnID:{conn_id} | {direction} | Size:{size} bytes | Time:{time.strftime('%Y.%m.%d-%H:%M:%S')}"
-                )
-                self.packet_listbox.insert(tk.END, display_text)
-                self.packet_listbox.see(tk.END) # Scroll to the end
-
-                # Store full packet details for later retrieval
-                self.packet_details[self.current_packet_index] = {
-                    'conn_id': conn_id,
-                    'direction': direction,
-                    'stream_index': stream_index,
-                    'raw_data': raw_data
-                }
-                self.current_packet_index += 1
+                # Call the helper function to add the packet to display and storage
+                self._add_packet_to_display(raw_data, direction, conn_id, stream_index, packet_type)
 
             except queue.Empty:
                 pass # No new packets, continue checking
@@ -454,8 +468,14 @@ class TLSSnifferApp:
             # Enable modify button when a packet is selected
             self.modify_button.config(state=tk.NORMAL)
             # Enable forward button only if "Hold Packets" toggle is active
+            # and the selected packet is an 'original' type that is currently held
             if self.hold_packets_var.get():
-                self.forward_button.config(state=tk.NORMAL)
+                packet_key = (packet_data['conn_id'], packet_data['direction'], packet_data['stream_index'])
+                with held_packets_lock:
+                    if packet_key in held_packets and packet_data['type'] == 'original':
+                        self.forward_button.config(state=tk.NORMAL)
+                    else:
+                        self.forward_button.config(state=tk.DISABLED)
             else:
                 self.forward_button.config(state=tk.DISABLED)
         else:
@@ -467,31 +487,25 @@ class TLSSnifferApp:
     def get_selected_packet_key(self):
         selected_indices = self.packet_listbox.curselection()
         if not selected_indices:
-            return None
+            return None, None # Return None for key and listbox_index
         listbox_index = selected_indices[0]
         packet_info = self.packet_details.get(listbox_index)
-        if packet_info:
-            return (packet_info['conn_id'], packet_info['direction'], packet_info['stream_index'])
-        return None
+        if packet_info and packet_info['type'] == 'original': # Only allow modifying original packets
+            return (packet_info['conn_id'], packet_info['direction'], packet_info['stream_index']), listbox_index
+        return None, None
 
     def modify_selected_packet(self):
-        packet_key = self.get_selected_packet_key()
+        packet_key, listbox_index = self.get_selected_packet_key()
         if not packet_key:
-            messagebox.showwarning("Warning", "No packet selected to modify.")
+            messagebox.showwarning("Warning", "No original packet selected to modify, or selected packet is already a modified version.")
             return
-
-        selected_listbox_index = self.packet_listbox.curselection()
-        if not selected_listbox_index:
-            messagebox.showwarning("Warning", "No packet selected to modify (listbox selection lost).")
-            return
-        listbox_index = selected_listbox_index[0]
 
         with held_packets_lock:
             if packet_key not in held_packets:
-                messagebox.showwarning("Warning", "Selected packet is not currently held. It might have already been forwarded or not yet arrived, or 'Hold Packets' is not enabled.")
+                messagebox.showwarning("Warning", "Selected packet is not currently held. It might have already been forwarded or 'Hold Packets' is not enabled.")
                 return
 
-            current_data = held_packets[packet_key]['data']
+            current_data = held_packets[packet_key]['modified_data'] # Get the current (possibly already modified) data
             current_hex = binascii.hexlify(current_data).decode('ascii')
 
             modified_hex = simpledialog.askstring(
@@ -505,20 +519,22 @@ class TLSSnifferApp:
             if modified_hex is not None:
                 try:
                     new_data = binascii.unhexlify(modified_hex)
-                    held_packets[packet_key]['data'] = new_data
+                    held_packets[packet_key]['modified_data'] = new_data # Update the modified data in held_packets
                     messagebox.showinfo("Success", "Packet data modified. Remember to forward it.")
-                    # Update the raw_data in self.packet_details for display refresh
-                    self.packet_details[listbox_index]['raw_data'] = new_data # Use the stored listbox_index
-                    self.display_packet_details() # Refresh display to show modified data --- Nigel: need to modify here or somewhere else to display both non-modified and modified packets.
+                    
+                    # No need to refresh display immediately here, as the modified packet will be displayed
+                    # when it's actually forwarded.
+                    # The original packet in self.packet_details should remain as the original.
+                    
                 except binascii.Error:
                     messagebox.showerror("Error", "Invalid hexadecimal input. Please enter only valid hex characters (0-9, a-f, A-F).")
                 except Exception as e:
                     messagebox.showerror("Error", f"An error occurred during modification: {e}")
 
     def forward_selected_packet(self):
-        packet_key = self.get_selected_packet_key()
+        packet_key, listbox_index = self.get_selected_packet_key()
         if not packet_key:
-            messagebox.showwarning("Warning", "No packet selected to forward.")
+            messagebox.showwarning("Warning", "No original packet selected to forward.")
             return
 
         if not self.hold_packets_var.get():
@@ -529,7 +545,8 @@ class TLSSnifferApp:
             if packet_key in held_packets:
                 # Set the event to release the packet
                 held_packets[packet_key]['event'].set()
-                # The messagebox "Packet forwarded." is removed as requested.
+                # The _forward_data function will now handle adding the modified packet to display
+                # if it was indeed modified.
             else:
                 messagebox.showwarning("Warning", "Selected packet is not currently held or has already been forwarded.")
 
@@ -585,8 +602,9 @@ class TLSSnifferApp:
                     direction = packet_info['direction']
                     stream_index = packet_info['stream_index']
                     raw_bytes = packet_info['raw_data']
+                    packet_type = packet_info.get('type', 'original') # Get packet type
 
-                    f.write(f"--- Packet [{listbox_index:06d}] ---------------------------------------\n")
+                    f.write(f"--- Packet [{listbox_index:06d}] ({packet_type.upper()}) ---------------------------------------\n")
                     f.write(f"Connection ID: {conn_id}\n")
                     f.write(f"Direction: {direction}\n")
                     f.write(f"Stream Index: {stream_index}\n")
