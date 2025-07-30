@@ -16,6 +16,7 @@
 #   03. v00.03.01 Fixed the ico issue.
 #   04. v01.00.00 Final release version.
 #   05. v01.00.01 Fixing auto disconnection. 2025.07.30
+#   06. v01.00.02 Fixing auto disconnection and adding TLSv1.3 support. 2025.07.31
 #
 # _______________________________________________________________________________
 
@@ -37,8 +38,8 @@ iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1I
 class TLSServerApp:
     def __init__(self, master):
         self.master = master
-        Server_ver = "01.00.01"
-        Server_yr = "2025.07.30"
+        Server_ver = "01.00.02"
+        Server_yr = "2025.07.31"
         master.title("TLS Server" + " (v" + Server_ver +")" + " - " + Server_yr + " - nigel.zhai@ul.com")
         master.geometry("500x700")
         master.minsize(500, 700)

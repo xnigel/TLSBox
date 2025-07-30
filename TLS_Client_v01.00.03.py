@@ -16,6 +16,7 @@
 #   03. v00.03.01 Fixed the ico issue.
 #   04. v01.00.00 Final release version.
 #   05. v01.00.01 Fixing auto disconnection. 2025.07.30
+#   06. v01.00.02 Fixing auto disconnection and adding TLSv1.3 support. 2025.07.31
 #
 # _______________________________________________________________________________
 
@@ -42,7 +43,7 @@ class TLSClientApp:
     def __init__(self, master):
         self.master = master
         Client_ver = "01.00.03" # Updated version number
-        Client_yr = "2025.07.30"
+        Client_yr = "2025.07.31"
         master.title("TLS Client" + " (v" + Client_ver +")" + " - " + Client_yr + " - nigel.zhai@ul.com")
         master.geometry("500x650")
         master.minsize(500, 700) # Set minimum window size
