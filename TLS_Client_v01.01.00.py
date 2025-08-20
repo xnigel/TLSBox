@@ -67,7 +67,7 @@ class TLSClientApp:
         config_frame.pack(padx=5, pady=10, fill="x", expand=False)
 
         # Connection details
-        self.ip_var = tk.StringVar(value="192.168.1.104")
+        self.ip_var = tk.StringVar(value="192.168.1.107")
         self.port_var = tk.StringVar(value="8080")
 
         # File paths for client certificates

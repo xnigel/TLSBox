@@ -119,7 +119,7 @@ class TLSSnifferApp:
         # Listen IP and Port
         tk.Label(config_frame, text="Listen IP:").grid(row=0, column=0, padx=2, pady=5, sticky="w")
         self.listen_ip_entry = tk.Entry(config_frame, width=14)
-        self.listen_ip_entry.insert(0, "192.168.1.104") # Default to listen on all interfaces
+        self.listen_ip_entry.insert(0, "192.168.1.107") # Default to listen on all interfaces
         self.listen_ip_entry.grid(row=0, column=1, padx=2, pady=5, sticky="w")
 
         tk.Label(config_frame, text="Listen Port:").grid(row=1, column=0, padx=2, pady=5, sticky="w")
@@ -130,7 +130,7 @@ class TLSSnifferApp:
         # Target IP/Host and Port
         tk.Label(config_frame, text="Target IP/Host:").grid(row=0, column=2, padx=2, pady=5, sticky="w")
         self.target_ip_host_entry = tk.Entry(config_frame, width=14)
-        self.target_ip_host_entry.insert(0, "192.168.1.104") # Default target
+        self.target_ip_host_entry.insert(0, "192.168.1.107") # Default target
         self.target_ip_host_entry.grid(row=0, column=3, padx=2, pady=5, sticky="w")
 
         tk.Label(config_frame, text="Target Port:").grid(row=1, column=2, padx=2, pady=5, sticky="w")
