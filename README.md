@@ -1,5 +1,9 @@
 # TLSBox demo figures
+<<<<<<< HEAD
 <img src="https://github.com/xnigel/TLSBox/blob/main/demo/TLS_Client.png" height =450> <img src="https://github.com/xnigel/TLSBox/blob/main/demo/TLSBox.png" height =450> <img src="https://github.com/xnigel/TLSBox/blob/main/demo/TLS_Server.png" height =450>
+=======
+<img src="https://github.com/xnigel/TLSBox/blob/main/demo/TLS_Client.png" height =400> <img src="https://github.com/xnigel/TLSBox/blob/main/demo/TLSBox.png" height =400> <img src="https://github.com/xnigel/TLSBox/blob/main/demo/TLS_Server.png" height =400>
+>>>>>>> 5d3f680838632c5b2c850acedd029c8a2bd2fe90
 
 # Handshake and packets sending
 <img src="https://github.com/xnigel/TLSBox/blob/main/demo/demo_1_success.png" width =800>
